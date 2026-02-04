@@ -9,6 +9,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from main.env.adb_wrapper import AdbWrapper
 from main.env.scrcpy_wrapper import ScrcpyWrapper
 from main.env.window_capture import WindowCapture
+from main.env.image_utils import ImageProcessor
+from main.env.types import EnvState, ActionType, EnvAction
 # from main.env.minitouch_wrapper import MinitouchWrapper # 暂时注释，避免没有设备时报错
 
 def test_environment():
@@ -49,6 +51,7 @@ def test_environment():
 
     # 3. Test Window Capture
     logger.info("--- Testing Window Capture ---")
+    latest_frame = None
     try:
         cap = WindowCapture(window_title)
         
@@ -57,12 +60,26 @@ def test_environment():
             frame = cap.capture()
             if frame is not None:
                 logger.info(f"Frame {i} captured successfully. Shape: {frame.shape}")
+                latest_frame = frame
             else:
                 logger.warning(f"Frame {i} capture failed (Window not found yet?)")
             time.sleep(1)
+
+        # 4. Test Image Processing & Types
+        if latest_frame is not None:
+            logger.info("--- Testing Image Processing & Types ---")
+            processor = ImageProcessor()
+            processed = processor.preprocess(latest_frame)
+            logger.info(f"Processed frame shape: {processed.shape}, Type: {processed.dtype}, Range: [{processed.min():.2f}, {processed.max():.2f}]")
+            
+            state = EnvState(raw_screen=latest_frame, processed_screen=processed)
+            logger.info(f"EnvState created successfully.")
+            
+            action = EnvAction(action_type=ActionType.TAP, start_pos=(0.5, 0.5))
+            logger.info(f"EnvAction sample created: {action}")
             
     except Exception as e:
-        logger.error(f"Window Capture Test Failed: {e}")
+        logger.error(f"Window Capture/Processing Test Failed: {e}")
     finally:
         # Cleanup
         logger.info("Cleaning up...")
