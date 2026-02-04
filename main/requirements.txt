@@ -2,3 +2,6 @@ pywin32
 numpy
 pyminitouch
 opencv-python
+gymnasium
+torch
+torchvision

@@ -12,6 +12,41 @@ from main.env.window_capture import WindowCapture
 from main.env.image_utils import ImageProcessor
 from main.env.types import EnvState, ActionType, EnvAction
 # from main.env.minitouch_wrapper import MinitouchWrapper # 暂时注释，避免没有设备时报错
+try:
+    from main.env.wzry_env import WZRYEnv
+    import torch
+    GYM_AVAILABLE = True
+except ImportError:
+    GYM_AVAILABLE = False
+    print("Gymnasium or Torch not installed, skipping Gym env test.")
+
+def test_gym_environment():
+    if not GYM_AVAILABLE:
+        return
+        
+    logger = logging.getLogger("TestGymEnv")
+    logger.info("=== Testing WZRY Gym Environment ===")
+    
+    try:
+        # 初始化环境
+        env = WZRYEnv(render_mode="rgb_array", resolution=(224, 224))
+        
+        # Reset
+        logger.info("Resetting environment...")
+        obs, info = env.reset()
+        logger.info(f"Observation shape: {obs.shape}, range: [{obs.min():.2f}, {obs.max():.2f}]")
+        
+        # ToTensor 演示
+        logger.info("Converting to Tensor...")
+        # obs 已经是 CHW 格式，所以设置 input_chw=True
+        obs_tensor = ImageProcessor.to_tensor(obs, input_chw=True) 
+        logger.info(f"Tensor shape: {obs_tensor.shape}, Device: {obs_tensor.device}")
+    except Exception as e:
+        logger.error(f"Gym Env Test Failed: {e}")
+    finally:
+        if 'env' in locals():
+            env.close()
+
 
 def test_environment():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -88,3 +123,4 @@ def test_environment():
 
 if __name__ == "__main__":
     test_environment()
+    # test_gym_environment() # Uncomment to test gym env
