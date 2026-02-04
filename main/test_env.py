@@ -1,0 +1,73 @@
+import logging
+import time
+import sys
+import os
+
+# 将项目根目录添加到 python path，以便能导入 main 模块
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from main.env.adb_wrapper import AdbWrapper
+from main.env.scrcpy_wrapper import ScrcpyWrapper
+from main.env.window_capture import WindowCapture
+# from main.env.minitouch_wrapper import MinitouchWrapper # 暂时注释，避免没有设备时报错
+
+def test_environment():
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger("TestEnv")
+
+    logger.info("=== Starting Environment Test ===")
+
+    # 1. Test ADB
+    logger.info("--- Testing ADB Wrapper ---")
+    adb = AdbWrapper()
+    try:
+        devices = adb.get_devices()
+        logger.info(f"Connected devices: {devices}")
+        
+        if not devices:
+            logger.warning("No devices connected. Skipping Scrcpy and Minitouch tests.")
+            return
+        
+        device_id = devices[0]
+        logger.info(f"Target Device: {device_id}")
+    except Exception as e:
+        logger.error(f"ADB Test Failed: {e}")
+        return
+
+    # 2. Test Scrcpy
+    logger.info("--- Testing Scrcpy Wrapper ---")
+    window_title = f"Auto-WZRY-Test-{int(time.time())}"
+    scrcpy = ScrcpyWrapper(device_id=device_id, max_size=800)
+    
+    try:
+        scrcpy.start(window_title=window_title)
+        logger.info("Waiting for Scrcpy window to appear...")
+        time.sleep(3) # Give it some time to launch
+    except Exception as e:
+        logger.error(f"Scrcpy Test Failed: {e}")
+        return
+
+    # 3. Test Window Capture
+    logger.info("--- Testing Window Capture ---")
+    try:
+        cap = WindowCapture(window_title)
+        
+        # Try to capture a few frames
+        for i in range(5):
+            frame = cap.capture()
+            if frame is not None:
+                logger.info(f"Frame {i} captured successfully. Shape: {frame.shape}")
+            else:
+                logger.warning(f"Frame {i} capture failed (Window not found yet?)")
+            time.sleep(1)
+            
+    except Exception as e:
+        logger.error(f"Window Capture Test Failed: {e}")
+    finally:
+        # Cleanup
+        logger.info("Cleaning up...")
+        scrcpy.stop()
+        logger.info("Test Finished.")
+
+if __name__ == "__main__":
+    test_environment()
