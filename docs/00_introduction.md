@@ -33,31 +33,31 @@
 
 ```mermaid
 graph TD
-    subgraph RealWorld [真实世界]
-        Phone[手机/模拟器]
+    subgraph RealWorld ["真实世界"]
+        Phone["手机/模拟器"]
     end
 
-    subgraph Computer [电脑端 Python]
+    subgraph Computer ["电脑端 Python"]
         direction TB
         
-        subgraph Senses [感知层]
-            Scrcpy[Scrcpy 投屏] -->|截取画面| State[图像处理 (Resize/ToTensor)]
-            OCR[OCR 文字识别] -->|读取KDA/金币| Reward[奖励计算器]
+        subgraph Senses ["感知层"]
+            Scrcpy["Scrcpy 投屏"] -->|"截取画面"| State["图像处理 (Resize/ToTensor)"]
+            OCR["OCR 文字识别"] -->|"读取KDA/金币"| Reward["奖励计算器"]
         end
 
-        subgraph Brain [大脑层]
-            State --> CNN[CNN 视觉中枢]
-            CNN --> PPO[PPO 决策网络]
+        subgraph Brain ["大脑层"]
+            State --> CNN["CNN 视觉中枢"]
+            CNN --> PPO["PPO 决策网络"]
         end
 
-        subgraph Actions [执行层]
-            PPO -->|输出坐标| MiniTouch[Minitouch 触控]
+        subgraph Actions ["执行层"]
+            PPO -->|"输出坐标"| MiniTouch["Minitouch 触控"]
         end
     end
 
-    Phone -->|视频流| Scrcpy
-    MiniTouch -->|点击指令| Phone
-    Reward -->|反馈分数| PPO
+    Phone -->|"视频流"| Scrcpy
+    MiniTouch -->|"点击指令"| Phone
+    Reward -->|"反馈分数"| PPO
 ```
 
 ---
