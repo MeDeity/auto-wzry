@@ -5,3 +5,5 @@ opencv-python
 gymnasium
 torch
 torchvision
+easyocr
+requests
