@@ -74,16 +74,17 @@ class ExpertRecorder:
                     img_filename = f"ep{episode_idx}_{int(timestamp*1000)}.jpg"
                     img_path = os.path.join(self.output_dir, img_filename)
                     
-                    # 异步保存图片以防卡顿 (简化版直接保存)
-                    # cv2.imwrite(img_path, frame) 
-                    # 存入列表后续批量保存或异步队列
+                    # 优化：缩小图片以节省内存 (1920x1080 -> 224x224)
+                    # 避免长时间录制导致 MemoryError
+                    resized_frame = cv2.resize(frame, self.env.resolution)
+
                     self.frames.append({
                         "timestamp": timestamp,
                         "img_path": img_filename,
-                        "img_data": frame
+                        "img_data": resized_frame
                     })
                 
-                cv2.imshow(self.window_name, display_frame)
+                cv2.imshow(self.window_name, cv2.cvtColor(display_frame, cv2.COLOR_RGB2BGR))
                 
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q'):
@@ -150,49 +151,30 @@ class ExpertRecorder:
             
         print(f"Saving {len(self.frames)} frames and {len(self.actions)} actions...")
         
-        # 保存图片
-        for frame_data in self.frames:
-            path = os.path.join(self.output_dir, frame_data["img_path"])
-            cv2.imwrite(path, frame_data["img_data"])
+        try:
+            # 保存图片
+            for frame_data in self.frames:
+                path = os.path.join(self.output_dir, frame_data["img_path"])
+                cv2.imwrite(path, frame_data["img_data"])
+                
+            # 匹配标签 (Frame -> Action)
+            # 这是一个关键步骤：每一帧对应什么动作？
+            # 简单策略：找到该帧时间戳之后最近的一个动作
             
-        # 匹配标签 (Frame -> Action)
-        # 这是一个关键步骤：每一帧对应什么动作？
-        # 简单策略：找到该帧时间戳之后最近的一个动作
-        
-        dataset = []
-        action_idx = 0
-        
-        for i, frame_data in enumerate(self.frames):
-            frame_time = frame_data["timestamp"]
+            # 保存原始数据索引
+            index_file = os.path.join(self.output_dir, f"episode_{episode_idx}.json")
+            with open(index_file, "w") as f:
+                json.dump({
+                    "frames": [{"ts": f["timestamp"], "path": f["img_path"]} for f in self.frames],
+                    "actions": self.actions
+                }, f)
+                
+            print(f"Data successfully saved to {index_file}")
             
-            # 寻找当前帧时刻的鼠标状态
-            # 简化：只记录按下位置，或者当前鼠标位置
-            # 如果是连续动作 (move)，需要更复杂的逻辑
-            
-            # 这里我们做一个简化假设：
-            # 每一帧的标签是 "下一时刻的动作意图"
-            # 如果当前没有鼠标操作，就是 "无动作" 或者 "保持上一动作"
-            
-            # 简单实现：查找 frame_time 之后最近的 action
-            current_action = [0.0, 0.0, 0.0, 0.0] # x1, y1, x2, y2 (模拟 Gym Action)
-            
-            # 实际模仿学习通常直接预测：是否有点击？点击位置在哪？
-            # 我们简化为：预测鼠标位置 (x, y) 和 是否按下 (press)
-            
-            # 查找最近的鼠标状态
-            # ... (复杂逻辑省略，暂存原始数据)
-            
-            pass
-
-        # 保存原始数据索引
-        index_file = os.path.join(self.output_dir, f"episode_{episode_idx}.json")
-        with open(index_file, "w") as f:
-            json.dump({
-                "frames": [{"ts": f["timestamp"], "path": f["img_path"]} for f in self.frames],
-                "actions": self.actions
-            }, f)
-            
-        print(f"Data saved to {index_file}")
+        except Exception as e:
+            print(f"Error saving data: {e}")
+            import traceback
+            traceback.print_exc()
 
 if __name__ == "__main__":
     recorder = ExpertRecorder()

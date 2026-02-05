@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
 import cv2
 import numpy as np
 
@@ -22,32 +23,51 @@ class ExpertDataset(Dataset):
         self.processor = ImageProcessor()
         
         # 加载所有 episode 数据
-        for filename in os.listdir(data_dir):
-            if filename.endswith(".json"):
-                with open(os.path.join(data_dir, filename), "r") as f:
-                    data = json.load(f)
-                    self._process_episode(data)
+        json_files = [f for f in os.listdir(data_dir) if f.endswith(".json")]
+        if not json_files:
+            print(f"Warning: No .json files found in {data_dir}. Did you run record_expert.py and save successfully?")
+            
+        for filename in json_files:
+            with open(os.path.join(data_dir, filename), "r") as f:
+                data = json.load(f)
+                self._process_episode(data)
     
     def _process_episode(self, data):
-        frames = data["frames"]
-        actions = data["actions"]
+        frames = sorted(data["frames"], key=lambda x: x["ts"])
+        actions = sorted(data["actions"], key=lambda x: x["timestamp"])
         
-        # 简单对齐策略：为每一帧找到最近的动作
-        # 更好的策略：插值或使用滑动窗口
+        # 状态机处理：按时间顺序遍历，维护当前的鼠标/触摸状态
+        action_idx = 0
+        
+        # 初始状态 (假设未按下，坐标在中心)
+        is_pressed = False
+        last_x, last_y = 0.5, 0.5 
         
         for frame in frames:
-            img_path = os.path.join(self.data_dir, frame["path"])
             ts = frame["ts"]
             
-            # 找到 ts 之后最近的动作 (简单预测下一步操作)
-            # 这里简化处理：如果没有动作，则设为 [0, 0, 0, 0]
-            # 实际需要根据项目需求定义 Expert Action 格式
+            # 更新状态：处理所有发生在该帧之前(或刚好同时)的动作
+            while action_idx < len(actions) and actions[action_idx]["timestamp"] <= ts:
+                act = actions[action_idx]
+                if act["type"] == "down" or act["type"] == "move":
+                    is_pressed = True
+                    last_x = act["x"]
+                    last_y = act["y"]
+                elif act["type"] == "up":
+                    is_pressed = False
+                    last_x = act["x"]
+                    last_y = act["y"]
+                action_idx += 1
             
-            # 示例：寻找最近的 'down' 或 'move'
-            target_action = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+            # 根据当前状态构造 Label
+            # 格式: [x, y, is_active, reserved]
+            if is_pressed:
+                target_action = np.array([last_x, last_y, 1.0, 0.0], dtype=np.float32)
+            else:
+                # 未按下时，目标设为中心点，且 active=0
+                target_action = np.array([0.5, 0.5, 0.0, 0.0], dtype=np.float32)
             
-            # ... (数据清洗逻辑)
-            
+            img_path = os.path.join(self.data_dir, frame["path"])
             self.samples.append((img_path, target_action))
 
     def __len__(self):
@@ -91,7 +111,8 @@ def train_bc():
         return
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+    print(f"Using device: {device}")
+
     # 1. 数据集
     dataset = ExpertDataset(data_dir)
     if len(dataset) == 0:
@@ -107,9 +128,16 @@ def train_bc():
     
     # 3. 训练循环
     epochs = 50
+    print(f"Start training for {epochs} epochs...", flush=True)
+    
     for epoch in range(epochs):
+        model.train()
         total_loss = 0
-        for imgs, actions in dataloader:
+        
+        # 使用 tqdm 显示进度条，强制输出到 stdout
+        pbar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}", unit="batch", file=sys.stdout)
+        
+        for imgs, actions in pbar:
             imgs = imgs.to(device)
             actions = actions.to(device)
             
@@ -122,8 +150,13 @@ def train_bc():
             
             total_loss += loss.item()
             
+            # 实时更新进度条后缀显示当前 Loss
+            pbar.set_postfix({"loss": f"{loss.item():.6f}"})
+            
         avg_loss = total_loss / len(dataloader)
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.6f}")
+        print(f"Epoch {epoch+1}/{epochs} Average Loss: {avg_loss:.6f}", flush=True)
+        
+        os.makedirs("models", exist_ok=True)
         
         # 保存
         if (epoch+1) % 10 == 0:

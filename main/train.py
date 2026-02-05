@@ -6,19 +6,30 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import time
 import logging
+import argparse
 import torch
 import numpy as np
 from main.env.wzry_env import WZRYEnv
 from main.model import ActorCritic
 from main.algo.ppo import PPO, RolloutBuffer
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train PPO Agent for WZRY")
+    parser.add_argument("--pretrained-path", type=str, default=None, help="Path to pretrained BC model (e.g., models/bc_model_epoch_50.pth)")
+    parser.add_argument("--resume-path", type=str, default=None, help="Path to existing PPO model to resume training (e.g., models/ppo_wzry_epoch_10.pth)")
+    parser.add_argument("--max-timesteps", type=int, default=100000, help="Maximum training timesteps")
+    return parser.parse_args()
+
 def train():
+    args = parse_args()
+    
     # 1. 配置
     log_dir = "logs"
     model_dir = "models"
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(model_dir, exist_ok=True)
     
+    # ... (logging config) ...
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -41,6 +52,42 @@ def train():
     action_dim = env.action_space.shape[0]  # 4
     
     policy = ActorCritic(state_dim, action_dim).to(device)
+    
+    start_epoch = 0
+
+    # 优先加载断点续训模型
+    if args.resume_path and os.path.exists(args.resume_path):
+        logger.info(f"Resuming training from {args.resume_path}...")
+        policy.load_state_dict(torch.load(args.resume_path, map_location=device))
+        
+        # 尝试从文件名解析 epoch (例如 ppo_wzry_epoch_10.pth -> 10)
+        try:
+            filename = os.path.basename(args.resume_path)
+            if "epoch_" in filename:
+                start_epoch = int(filename.split("epoch_")[1].split(".")[0])
+                logger.info(f"Resumed from epoch {start_epoch}")
+        except:
+            logger.warning("Could not parse epoch from filename, starting from epoch 0")
+            
+    # 如果没有断点，则加载 BC 预训练权重 (如果提供)
+    elif args.pretrained_path:
+        if os.path.exists(args.pretrained_path):
+            logger.info(f"Loading pretrained BC model from {args.pretrained_path}...")
+            checkpoint = torch.load(args.pretrained_path, map_location=device)
+            
+            # 适配 BCModel -> ActorCritic 的权重名称
+            new_state_dict = {}
+            for k, v in checkpoint.items():
+                if k.startswith('encoder.'):
+                    new_state_dict[k] = v
+                elif k.startswith('fc.'):
+                    new_key = k.replace('fc.', 'actor_mean.')
+                    new_state_dict[new_key] = v
+            
+            msg = policy.load_state_dict(new_state_dict, strict=False)
+            logger.info(f"Loaded pretrained BC weights. Missing keys: {msg.missing_keys}")
+        else:
+            logger.warning(f"Pretrained path {args.pretrained_path} does not exist. Starting from scratch.")
     
     # 4. 初始化算法
     ppo_agent = PPO(
@@ -65,7 +112,7 @@ def train():
     state_tensor = torch.from_numpy(state).unsqueeze(0).to(device)
     
     total_steps = 0
-    epoch = 0
+    epoch = start_epoch
     
     logger.info("Starting training...")
     

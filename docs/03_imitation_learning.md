@@ -45,7 +45,8 @@ python main/record_expert.py
 ### 启动方式
 
 ```powershell
-python main/train_bc.py
+# 使用 Conda 环境运行 (推荐)
+conda run --no-capture-output -n wzry python main/train_bc.py
 ```
 
 ### 训练细节
@@ -65,10 +66,24 @@ python main/train_bc.py
 
 完成 BC 训练后，您将获得一个已经“会玩”的模型权重。在运行 PPO 训练 (`main/train.py`) 时，可以加载这个权重作为起点：
 
-*(需修改 `main/train.py` 代码以支持加载预训练权重，后续步骤中实现)*
+### 4.1 首次启动 (热启动)
 
-```python
-# 伪代码示例
-model = ActorCritic(...)
-model.load_state_dict(torch.load("models/bc_model_epoch_50.pth"), strict=False)
+使用 `--pretrained-path` 加载 BC 模型，作为 PPO 的初始起点。
+
+```powershell
+# 加载 BC 预训练权重启动 PPO 训练
+conda run --no-capture-output -n wzry python main/train.py --pretrained-path models/bc_model_epoch_50.pth
 ```
+
+> **注意**: 请将 `models/bc_model_epoch_50.pth` 替换为您实际生成的模型路径。
+
+### 4.2 断点续训
+
+如果您中断了训练，想从之前的 PPO 存档继续（例如从第 10 轮继续），请使用 `--resume-path`：
+
+```powershell
+# 从 PPO 断点继续训练 (脚本会自动识别 Epoch 并从下一轮开始)
+conda run --no-capture-output -n wzry python main/train.py --resume-path models/ppo_wzry_epoch_10.pth
+```
+
+> **优先级说明**: 如果同时指定了 `resume-path` 和 `pretrained-path`，脚本会**优先使用 resume-path** 进行断点续训。

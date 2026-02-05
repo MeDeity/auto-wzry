@@ -7,3 +7,5 @@ torch
 torchvision
 easyocr
 requests
+pynput
+tqdm

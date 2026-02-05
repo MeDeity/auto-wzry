@@ -52,7 +52,7 @@ class ActorCritic(nn.Module):
         features = self.encoder(state)
         
         # Actor
-        mean = torch.tanh(self.actor_mean(features))
+        mean = torch.sigmoid(self.actor_mean(features))
         log_std = self.actor_log_std.expand_as(mean)
         std = torch.exp(log_std)
         
