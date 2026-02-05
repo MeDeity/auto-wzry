@@ -87,3 +87,46 @@ conda run --no-capture-output -n wzry python main/train.py --resume-path models/
 ```
 
 > **优先级说明**: 如果同时指定了 `resume-path` 和 `pretrained-path`，脚本会**优先使用 resume-path** 进行断点续训。
+
+---
+
+## 5. 多局数据积累与迭代 (Iterative Data Collection)
+
+**Q: 我玩了一局，模型还是很笨，如何让它更聪明？**
+
+这是非常正常的！一局游戏的数据量往往不足以覆盖所有情况（例如：走位、团战、回城等）。正确的做法是 **“增量式教学”**。
+
+### 操作步骤
+
+1.  **不要删除旧数据**：
+    *   保留 `data/expert_data` 文件夹中的旧数据。
+2.  **再次运行录制脚本**：
+    *   直接运行 `python main/record_expert.py`。
+    *   脚本会自动检测已有的 `episode_0.json`，并将新的一局保存为 `episode_1.json`、`episode_2.json` 等。
+    *   **建议**：专门针对模型薄弱的环节进行录制（例如：如果您发现模型不会走出泉水，就专门录制几分钟“走出泉水”的操作）。
+3.  **重新运行 BC 训练**：
+    *   运行 `conda run --no-capture-output -n wzry python main/train_bc.py`。
+    *   训练脚本会自动加载 `data/expert_data` 下的 **所有** JSON 文件（新旧数据一起训练）。
+    *   训练出的新模型（如 `bc_model_epoch_50.pth`）将会融合所有局的经验。
+
+### 常见疑问
+**Q: 每次都把旧数据重新喂给模型，会有问题吗？**
+**A: 不仅没问题，而且必须这样做！**
+目前的训练脚本每次都是**从头开始**训练一个新的模型。如果您只喂给它“新的一局”数据，模型会发生**灾难性遗忘 (Catastrophic Forgetting)**——即学会了新操作（如走出泉水），但把旧操作（如打怪）全忘了。
+只有将 **旧数据 + 新数据** 混合在一起训练，模型才能同时掌握所有技能，变得越来越强。
+
+**Q: 数据多了训练时间太长怎么办？**
+**A: 使用断点续训！**
+从第二局开始，您可以使用 `--resume-path` 参数，加载上一局训练好的模型继续训练。
+这样模型已经有了基础，只需要少量 Epoch (如 20 轮) 就能适应新数据，大大节省时间。
+
+```powershell
+# 示例：加载上一局的模型 (epoch 50)，再训练 20 轮
+conda run --no-capture-output -n wzry python main/train_bc.py --resume-path models/bc_model_epoch_50.pth --epochs 20
+```
+
+### 循环迭代
+您可以多次重复上述过程：
+`录制新数据` -> `重新训练 BC` -> `测试效果` -> `发现不足` -> `针对性录制` -> ...
+
+直到您觉得 BC 模型的基础表现已经可以接受（比如能正常走路、简单平A），再转入 PPO 强化学习阶段。

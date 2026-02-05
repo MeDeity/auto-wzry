@@ -39,6 +39,29 @@ class ExpertRecorder:
         self.current_frame = None
         self.last_action_time = 0
         
+    def _get_next_episode_idx(self):
+        """
+        自动探测 data/expert_data 下最大的 episode_idx
+        防止覆盖已有数据
+        """
+        json_files = [f for f in os.listdir(self.output_dir) if f.startswith("episode_") and f.endswith(".json")]
+        if not json_files:
+            return 0
+            
+        indices = []
+        for f in json_files:
+            try:
+                # episode_12.json -> 12
+                idx = int(f.split("_")[1].split(".")[0])
+                indices.append(idx)
+            except ValueError:
+                continue
+                
+        if not indices:
+            return 0
+            
+        return max(indices) + 1
+        
     def run(self):
         print("Initializing environment...")
         self.env.reset()
@@ -51,7 +74,9 @@ class ExpertRecorder:
         print("2. Press 'r' to start/stop recording.")
         print("3. Press 'q' to quit.")
         
-        episode_idx = 0
+        # 自动探测下一个 episode_idx
+        episode_idx = self._get_next_episode_idx()
+        print(f"Next episode index: {episode_idx}")
         
         try:
             while True:

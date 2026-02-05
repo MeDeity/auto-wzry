@@ -104,7 +104,17 @@ class BCModel(nn.Module):
         feat = self.encoder(x)
         return torch.sigmoid(self.fc(feat)) # 输出 0-1 之间的坐标
 
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train BC Model")
+    parser.add_argument("--resume-path", type=str, default=None, help="Path to previous BC model to resume training")
+    parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
+    return parser.parse_args()
+
 def train_bc():
+    args = parse_args()
+    
     data_dir = "data/expert_data"
     if not os.path.exists(data_dir):
         print(f"Data directory {data_dir} does not exist.")
@@ -123,19 +133,42 @@ def train_bc():
     
     # 2. 模型
     model = BCModel().to(device)
+    
+    # 加载断点 (如果提供)
+    start_epoch = 0
+    if args.resume_path:
+        if os.path.exists(args.resume_path):
+            print(f"Resuming training from {args.resume_path}...")
+            model.load_state_dict(torch.load(args.resume_path, map_location=device))
+            
+            # 尝试解析 epoch
+            try:
+                # models/bc_model_epoch_50.pth -> 50
+                start_epoch = int(args.resume_path.split("_epoch_")[1].split(".")[0])
+                print(f"Resumed from epoch {start_epoch}")
+            except:
+                pass
+        else:
+            print(f"Warning: Resume path {args.resume_path} not found. Starting from scratch.")
+
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     criterion = nn.MSELoss() # 预测坐标的均方误差
     
     # 3. 训练循环
-    epochs = 50
-    print(f"Start training for {epochs} epochs...", flush=True)
+    total_epochs = args.epochs
+    # 如果是续训，我们可能希望在原有基础上再训练 N 个 epoch，或者训练到指定的 total_epochs
+    # 这里为了简单，我们假设 args.epochs 是指 *新增* 的训练轮数 (如果使用了 resume)
+    # 或者理解为总共要达到的轮数？
+    # 通常续训时，用户希望 "再训练 20 轮"。
     
-    for epoch in range(epochs):
+    print(f"Start training for {total_epochs} epochs (starting from {start_epoch})...", flush=True)
+    
+    for epoch in range(start_epoch, start_epoch + total_epochs):
         model.train()
         total_loss = 0
         
         # 使用 tqdm 显示进度条，强制输出到 stdout
-        pbar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}", unit="batch", file=sys.stdout)
+        pbar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{start_epoch + total_epochs}", unit="batch", file=sys.stdout)
         
         for imgs, actions in pbar:
             imgs = imgs.to(device)
@@ -154,7 +187,7 @@ def train_bc():
             pbar.set_postfix({"loss": f"{loss.item():.6f}"})
             
         avg_loss = total_loss / len(dataloader)
-        print(f"Epoch {epoch+1}/{epochs} Average Loss: {avg_loss:.6f}", flush=True)
+        print(f"Epoch {epoch+1}/{start_epoch + total_epochs} Average Loss: {avg_loss:.6f}", flush=True)
         
         os.makedirs("models", exist_ok=True)
         
