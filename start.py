@@ -24,7 +24,8 @@ def print_menu():
     print("5. [微调] PPO 强化学习 - 断点续训 (PPO - Resume)")
     print("   -> 场景: PPO训练中断后继续训练时使用。")
     print("--------------------------------------------------")
-    print("6. 退出 (Exit)")
+    print("6. [测试] 模型实战测试 (Test Model)")
+    print("   -> 场景: 加载训练好的模型，在实时画面上查看预测效果。")
     print("==================================================")
     print("7. [教学] 模型显微镜 (Model Inspector)")
     print("   -> 场景: 查看一张图片如何在神经网络中流动的演示。")
@@ -40,6 +41,10 @@ def print_menu():
     print("11. [教学] 基础数学补完 (Math Foundation)")
     print("   -> 场景: 二项式展开、链式法则的直观验证。")
     print("   -> 理论: 详见 docs/10_math_foundation.md")
+    print("--------------------------------------------------")
+    print("12. [调试] 检查训练数据质量 (Check Data)")
+    print("   -> 场景: 诊断为什么模型只输出 UP 或 0.00。")
+    print("13. 退出 (Exit)")
     print("==================================================")
 
 def run_command(cmd_args):
@@ -64,7 +69,7 @@ def run_command(cmd_args):
 def main():
     while True:
         print_menu()
-        choice = input("请输入选项 (1-11): ").strip()
+        choice = input("请输入选项 (1-12): ").strip()
         
         if choice == '1':
             print("\n正在启动录制脚本...")
@@ -107,8 +112,13 @@ def main():
             run_command(['main/train.py', '--resume-path', model_path])
             
         elif choice == '6':
-            print("Exiting...")
-            sys.exit(0)
+            print("\n请将您的模型文件 (例如 models/bc_model_epoch_90.pth) 拖入此窗口，然后按回车。")
+            model_path = input("模型路径: ").strip().strip('"')
+            if not model_path:
+                continue
+            
+            print(f"\n正在启动模型测试: {model_path} ...\n")
+            run_command(['main/debug/test_model.py', '--model-path', model_path])
             
         elif choice == '7':
             print("\n正在启动模型显微镜 (Model Inspector)...\n")
@@ -129,6 +139,14 @@ def main():
         elif choice == '11':
             print("\n正在启动基础数学实验室...\n")
             run_command(['main/debug/math_foundation_lab.py'])
+
+        elif choice == '12':
+            print("\n正在检查数据质量...\n")
+            run_command(['main/debug/check_data.py'])
+
+        elif choice == '13':
+            print("Exiting...")
+            sys.exit(0)
 
         else:
             print("无效的选项，请重新输入。")

@@ -86,28 +86,38 @@ class ExpertRecorder:
                 
                 # 显示
                 display_frame = frame.copy()
+                h, w = display_frame.shape[:2]
                 
                 if self.is_recording:
                     # 录制状态指示
                     cv2.circle(display_frame, (30, 30), 10, (0, 0, 255), -1)
-                    
-                    # 保存数据
-                    timestamp = time.time()
-                    
-                    # 保存帧 (降频保存，比如 10fps)
-                    # 这里简化为每帧都存，实际应用需要控制频率
-                    img_filename = f"ep{episode_idx}_{int(timestamp*1000)}.jpg"
-                    img_path = os.path.join(self.output_dir, img_filename)
-                    
-                    # 优化：缩小图片以节省内存 (1920x1080 -> 224x224)
-                    # 避免长时间录制导致 MemoryError
-                    resized_frame = cv2.resize(frame, self.env.resolution)
+                    cv2.putText(display_frame, "RECORDING", (50, 40), 
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                else:
+                    cv2.putText(display_frame, "Press 'R' to Record", (30, 40), 
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-                    self.frames.append({
-                        "timestamp": timestamp,
-                        "img_path": img_filename,
-                        "img_data": resized_frame
-                    })
+                # 提示操作区域
+                cv2.putText(display_frame, "OPERATE IN THIS WINDOW", (30, h - 30), 
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+                    
+                # 保存数据
+                timestamp = time.time()
+                
+                # 保存帧 (降频保存，比如 10fps)
+                # 这里简化为每帧都存，实际应用需要控制频率
+                img_filename = f"ep{episode_idx}_{int(timestamp*1000)}.jpg"
+                img_path = os.path.join(self.output_dir, img_filename)
+                
+                # 优化：缩小图片以节省内存 (1920x1080 -> 224x224)
+                # 避免长时间录制导致 MemoryError
+                resized_frame = cv2.resize(frame, self.env.resolution)
+
+                self.frames.append({
+                    "timestamp": timestamp,
+                    "img_path": img_filename,
+                    "img_data": resized_frame
+                })
                 
                 cv2.imshow(self.window_name, cv2.cvtColor(display_frame, cv2.COLOR_RGB2BGR))
                 
@@ -130,10 +140,12 @@ class ExpertRecorder:
             cv2.destroyAllWindows()
 
     def on_mouse(self, event, x, y, flags, param):
-        if not self.is_recording:
-            return
-            
         timestamp = time.time()
+        
+        # 确保 current_frame 不为空，防止启动时崩溃
+        if self.current_frame is None:
+            return
+
         h, w = self.current_frame.shape[:2]
         
         # 归一化坐标
@@ -142,32 +154,47 @@ class ExpertRecorder:
         
         if event == cv2.EVENT_LBUTTONDOWN:
             # 点击/按下
-            self.actions.append({
-                "timestamp": timestamp,
-                "type": "down",
-                "x": norm_x,
-                "y": norm_y
-            })
-            # 同时发送给手机执行 (可选，为了边玩边录)
-            # self.env.minitouch.tap(int(norm_x * self.env.real_width), int(norm_y * self.env.real_height))
+            if self.is_recording:
+                self.actions.append({
+                    "timestamp": timestamp,
+                    "type": "down",
+                    "x": norm_x,
+                    "y": norm_y
+                })
+            
+            # 实时控制转发
+            if self.env.minitouch:
+                real_x, real_y = self.env.transform_touch(norm_x, norm_y)
+                self.env.minitouch.touch_down(real_x, real_y)
             
         elif event == cv2.EVENT_LBUTTONUP:
             # 抬起
-            self.actions.append({
-                "timestamp": timestamp,
-                "type": "up",
-                "x": norm_x,
-                "y": norm_y
-            })
+            if self.is_recording:
+                self.actions.append({
+                    "timestamp": timestamp,
+                    "type": "up",
+                    "x": norm_x,
+                    "y": norm_y
+                })
+                
+            # 实时控制转发
+            if self.env.minitouch:
+                self.env.minitouch.touch_up()
             
         elif event == cv2.EVENT_MOUSEMOVE and (flags & cv2.EVENT_FLAG_LBUTTON):
             # 拖拽
-            self.actions.append({
-                "timestamp": timestamp,
-                "type": "move",
-                "x": norm_x,
-                "y": norm_y
-            })
+            if self.is_recording:
+                self.actions.append({
+                    "timestamp": timestamp,
+                    "type": "move",
+                    "x": norm_x,
+                    "y": norm_y
+                })
+
+            # 实时控制转发
+            if self.env.minitouch:
+                real_x, real_y = self.env.transform_touch(norm_x, norm_y)
+                self.env.minitouch.touch_move(real_x, real_y)
 
     def save_data(self, episode_idx):
         if not self.frames:
