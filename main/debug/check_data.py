@@ -16,8 +16,8 @@ def check_data_quality():
         return
 
     print(f"Found {len(json_files)} episodes. Analyzing...\n")
-    print(f"{'Episode':<15} | {'Frames':<8} | {'Actions':<8} | {'Active Ratio':<12} | {'Status'}")
-    print("-" * 65)
+    print(f"{'Episode':<15} | {'Frames':<6} | {'Actions':<15} | {'Moves/Click':<11} | {'Active':<7} | {'Status'}")
+    print("-" * 85)
 
     total_frames = 0
     total_active_frames = 0
@@ -35,6 +35,8 @@ def check_data_quality():
             num_down = sum(1 for a in actions if a["type"] == "down")
             num_move = sum(1 for a in actions if a["type"] == "move")
             num_up = sum(1 for a in actions if a["type"] == "up")
+            
+            moves_per_click = num_move / num_down if num_down > 0 else 0
             
             # 模拟训练时的状态机逻辑
             action_idx = 0
@@ -75,7 +77,7 @@ def check_data_quality():
                 status = "💤 No Actions"
 
             # print(f"{filename:<15} | {len(frames):<8} | {len(actions):<8} | {ratio:.1%}      | {status}")
-            print(f"{filename:<15} | {len(frames):<8} | D:{num_down} M:{num_move} U:{num_up} | {ratio:.1%}      | {status}")
+            print(f"{filename:<15} | {len(frames):<6} | D:{num_down:<3} M:{num_move:<4} U:{num_up:<3} | {moves_per_click:<11.1f} | {ratio:<7.1%} | {status}")
             
             total_frames += len(frames)
             total_active_frames += active_count
@@ -83,7 +85,7 @@ def check_data_quality():
         except Exception as e:
             print(f"{filename:<15} | Error: {e}")
 
-    print("-" * 65)
+    print("-" * 85)
     avg_ratio = total_active_frames / total_frames if total_frames else 0
     print(f"\nTotal Frames: {total_frames}")
     print(f"Overall Active Ratio: {avg_ratio:.1%}")

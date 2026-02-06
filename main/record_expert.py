@@ -165,6 +165,7 @@ class ExpertRecorder:
             # 实时控制转发
             if self.env.minitouch:
                 real_x, real_y = self.env.transform_touch(norm_x, norm_y)
+                print(f"Click Down: Norm({norm_x:.2f}, {norm_y:.2f}) -> Real({real_x}, {real_y})")
                 self.env.minitouch.touch_down(real_x, real_y)
             
         elif event == cv2.EVENT_LBUTTONUP:
@@ -184,16 +185,20 @@ class ExpertRecorder:
         elif event == cv2.EVENT_MOUSEMOVE and (flags & cv2.EVENT_FLAG_LBUTTON):
             # 拖拽
             if self.is_recording:
-                self.actions.append({
-                    "timestamp": timestamp,
-                    "type": "move",
-                    "x": norm_x,
-                    "y": norm_y
-                })
+                # 限制采样率，避免记录过多 move
+                if timestamp - self.last_action_time > 0.05:
+                    self.actions.append({
+                        "timestamp": timestamp,
+                        "type": "move",
+                        "x": norm_x,
+                        "y": norm_y
+                    })
+                    self.last_action_time = timestamp
 
             # 实时控制转发
             if self.env.minitouch:
                 real_x, real_y = self.env.transform_touch(norm_x, norm_y)
+                # print(f"Move: {norm_x:.2f},{norm_y:.2f} -> {real_x},{real_y}")
                 self.env.minitouch.touch_move(real_x, real_y)
 
     def save_data(self, episode_idx):

@@ -60,12 +60,13 @@ class ExpertDataset(Dataset):
                 action_idx += 1
             
             # 根据当前状态构造 Label
-            # 格式: [x, y, is_active, reserved]
+            # 格式: [x, y, is_active]
+            # 适配 PPO 的 3D 动作空间
             if is_pressed:
-                target_action = np.array([last_x, last_y, 1.0, 0.0], dtype=np.float32)
+                target_action = np.array([last_x, last_y, 1.0], dtype=np.float32)
             else:
                 # 未按下时，目标设为中心点，且 active=0
-                target_action = np.array([0.5, 0.5, 0.0, 0.0], dtype=np.float32)
+                target_action = np.array([0.5, 0.5, 0.0], dtype=np.float32)
             
             img_path = os.path.join(self.data_dir, frame["path"])
             self.samples.append((img_path, target_action))
@@ -95,7 +96,7 @@ class BCModel(nn.Module):
     行为克隆模型 (Behavior Cloning)
     结构比 RL 模型简单，只需要 Actor 部分
     """
-    def __init__(self, action_dim=4):
+    def __init__(self, action_dim=3): # 默认为 3 (x, y, press)
         super(BCModel, self).__init__()
         self.encoder = CNNEncoder(output_dim=512)
         self.fc = nn.Linear(512, action_dim)

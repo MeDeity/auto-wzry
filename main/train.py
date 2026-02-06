@@ -85,12 +85,16 @@ def train():
                 elif k.startswith('fc.'):
                     new_key = k.replace('fc.', 'actor_mean.')
                     
-                    # 检查形状是否匹配，如果不匹配则进行切片
-                    # BC Model fc: [4, 512]
+                    # 检查形状是否匹配
                     # PPO Actor mean: [3, 512]
+                    
                     if v.shape[0] == 4 and action_dim == 3:
-                        logger.info(f"Slicing weights for {k} from {v.shape} to {(3, v.shape[1] if len(v.shape)>1 else '')}")
-                        new_state_dict[new_key] = v[:3] # 取前3维 (x, y, press)
+                        logger.warning(f"Detected 4D weights (Swipe) for 3D environment (Continuous). "
+                                       f"This BC model is incompatible. Slicing anyway but performance will be poor.")
+                        new_state_dict[new_key] = v[:3] # 强行切片，但这会导致 press_prob (Dim 2) 被映射为 x2
+                    elif v.shape[0] == 3 and action_dim == 3:
+                        # 完美匹配
+                        new_state_dict[new_key] = v
                     else:
                         new_state_dict[new_key] = v
             
@@ -126,6 +130,10 @@ def train():
     
     logger.info("Starting training...")
     
+    # Visualization State
+    last_info_text = ""
+    last_viz_pos = None # 上一帧的坐标 (x, y) 用于绘制轨迹
+
     try:
         while total_steps < max_timesteps:
             # === Collection Phase ===
@@ -152,6 +160,11 @@ def train():
                         if raw_frame is not None:
                             # Convert to BGR for OpenCV
                             display_frame = cv2.cvtColor(raw_frame, cv2.COLOR_RGB2BGR)
+                            
+                            # Draw ROI (Debug)
+                            if hasattr(env, 'reward_calc'):
+                                display_frame = env.reward_calc.debug_show_roi(display_frame)
+
                             h, w = display_frame.shape[:2]
                             
                             # Action: [x, y, press_prob]
@@ -161,8 +174,30 @@ def train():
                             center_x = int(pred_x * w)
                             center_y = int(pred_y * h)
                             
-                            color = (0, 0, 255) if pred_prob > 0.5 else (0, 255, 0) # Red if press, Green if release
-                            status_text = f"DOWN ({pred_prob:.2f})" if pred_prob > 0.5 else f"UP ({pred_prob:.2f})"
+                            is_pressed = pred_prob > 0.5
+                            color = (0, 0, 255) if is_pressed else (0, 255, 0) # Red if press, Green if release
+                            
+                            # Determine Status Text (DOWN / UP / MOVE)
+                            status_text = "UP"
+                            if is_pressed:
+                                if last_viz_pos is not None:
+                                    # 如果上一帧也是按下，且距离超过一定阈值，则视为 MOVE
+                                    lx, ly = last_viz_pos
+                                    dist = ((center_x - lx)**2 + (center_y - ly)**2)**0.5
+                                    if dist > 5:
+                                        status_text = "MOVE"
+                                        # 画轨迹线
+                                        cv2.line(display_frame, (lx, ly), (center_x, center_y), (0, 255, 255), 2)
+                                    else:
+                                        status_text = "DOWN"
+                                else:
+                                    status_text = "DOWN"
+                                # 更新上一帧位置 (仅在按下时记录)
+                                last_viz_pos = (center_x, center_y)
+                            else:
+                                last_viz_pos = None # 抬起后重置轨迹
+                                
+                            status_text += f" ({pred_prob:.2f})"
                             
                             cv2.circle(display_frame, (center_x, center_y), 20, color, 2)
                             cv2.line(display_frame, (center_x - 30, center_y), (center_x + 30, center_y), color, 2)
@@ -175,6 +210,21 @@ def train():
                             # Draw Reward
                             cv2.putText(display_frame, f"Reward: {reward:.4f}", (10, 120),
                                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+                            
+                            # Update Info Text if new info available
+                            if info:
+                                new_text_parts = []
+                                if 'gold' in info:
+                                    new_text_parts.append(f"Gold: {info['gold']}")
+                                if 'kda' in info:
+                                    new_text_parts.append(f"KDA: {info['kda']}")
+                                if new_text_parts:
+                                    last_info_text = " | ".join(new_text_parts)
+                                    
+                            # Draw Info Text
+                            if last_info_text:
+                                cv2.putText(display_frame, last_info_text, (10, 160), 
+                                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
                             cv2.imshow("PPO Training Monitor", display_frame)
                             if cv2.waitKey(1) & 0xFF == ord('q'):
