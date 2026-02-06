@@ -117,13 +117,13 @@ class ExpertRecorder:
                 elif key == ord('r'):
                     self.is_recording = not self.is_recording
                     if self.is_recording:
-                        print("Recording started...")
+                        print(f"Recording started (Episode {episode_idx})...")
                         self.frames = []
                         self.actions = []
-                        episode_idx += 1
                     else:
                         print("Recording stopped. Saving data...")
                         self.save_data(episode_idx)
+                        episode_idx += 1
                         
         finally:
             self.env.close()
