@@ -37,6 +37,9 @@ def print_menu():
     print("10. [教学] 微积分实验室 (Calculus Lab)")
     print("   -> 场景: 用 SymPy 自动推导证明 Sigmoid/MSE 导数。")
     print("   -> 理论: 详见 docs/09_calculus_review.md")
+    print("11. [教学] 基础数学补完 (Math Foundation)")
+    print("   -> 场景: 二项式展开、链式法则的直观验证。")
+    print("   -> 理论: 详见 docs/10_math_foundation.md")
     print("==================================================")
 
 def run_command(cmd_args):
@@ -61,7 +64,7 @@ def run_command(cmd_args):
 def main():
     while True:
         print_menu()
-        choice = input("请输入选项 (1-10): ").strip()
+        choice = input("请输入选项 (1-11): ").strip()
         
         if choice == '1':
             print("\n正在启动录制脚本...")
@@ -122,6 +125,10 @@ def main():
         elif choice == '10':
             print("\n正在启动微积分实验室 (Calculus Lab)...\n")
             run_command(['main/debug/calculus_lab.py'])
+
+        elif choice == '11':
+            print("\n正在启动基础数学实验室...\n")
+            run_command(['main/debug/math_foundation_lab.py'])
 
         else:
             print("无效的选项，请重新输入。")
