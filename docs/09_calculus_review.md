@@ -88,23 +88,39 @@ $$
 f'(x) = \lim_{\Delta x \to 0} \frac{(x + \Delta x)^n - x^n}{\Delta x}
 $$
 
-利用二项式展开：
+**背景知识：二项式展开**
+$(a + b)^n = a^n + n a^{n-1} b + \frac{n(n-1)}{2} a^{n-2} b^2 + \dots + b^n$
+这里我们令 $a = x, b = \Delta x$。
 
 $$
-(x + \Delta x)^n = x^n + n \cdot x^{n-1} \cdot \Delta x + \frac{n(n-1)}{2} x^{n-2} (\Delta x)^2 + \dots
+(x + \Delta x)^n = x^n + n \cdot x^{n-1} \cdot \Delta x + \frac{n(n-1)}{2} x^{n-2} (\Delta x)^2 + \dots + (\Delta x)^n
 $$
 
-代入极限公式：
+**解释**：
+*   第一项 $x^n$：完全不含 $\Delta x$。
+*   第二项 $n \cdot x^{n-1} \cdot \Delta x$：含有一个 $\Delta x$。
+*   后面所有项：含有 $(\Delta x)^2, (\Delta x)^3 \dots$ (我们把这些统称为高阶无穷小，记作 $O(\Delta x^2)$)。
+
+代入导数极限公式：
 
 $$
-= \lim_{\Delta x \to 0} \frac{x^n + n x^{n-1} \Delta x + O(\Delta x^2) - x^n}{\Delta x}
+f'(x) = \lim_{\Delta x \to 0} \frac{x^n + n x^{n-1} \Delta x + O(\Delta x^2) - x^n}{\Delta x}
 $$
+
+分子里的 $x^n$ 和 $-x^n$ 抵消了：
+
+$$
+= \lim_{\Delta x \to 0} \frac{n x^{n-1} \Delta x + O(\Delta x^2)}{\Delta x}
+$$
+
+分子分母同时除以 $\Delta x$：
 
 $$
 = \lim_{\Delta x \to 0} (n x^{n-1} + O(\Delta x))
 $$
 
-当 $\Delta x \to 0$，所有含 $\Delta x$ 的项都消失了。
+当 $\Delta x$ 趋近于 0 时，后面那一串 $O(\Delta x)$ 全部变成了 0。
+只剩下：
 
 $$
 f'(x) = n x^{n-1}
@@ -112,7 +128,11 @@ $$
 
 ### 4.3 指数函数 (Exponential)
 
-证明：$f(x) = e^x$
+证明：
+
+$$
+f(x) = e^x
+$$
 
 $$
 f'(x) = \lim_{\Delta x \to 0} \frac{e^{x + \Delta x} - e^x}{\Delta x}
@@ -126,7 +146,11 @@ $$
 = e^x \cdot \lim_{\Delta x \to 0} \frac{e^{\Delta x} - 1}{\Delta x}
 $$
 
-数学家告诉我们，自然常数 $e$ 的定义就是让这个极限为 1：$\lim_{h \to 0} \frac{e^h - 1}{h} = 1$。
+数学家告诉我们，自然常数 $e$ 的定义就是让这个极限为 1：
+
+$$
+\lim_{h \to 0} \frac{e^h - 1}{h} = 1
+$$
 
 $$
 f'(x) = e^x \cdot 1 = e^x
@@ -134,7 +158,11 @@ $$
 
 ### 4.4 对数函数 (Logarithm)
 
-证明：$y = \ln(x)$
+证明：
+
+$$
+y = \ln(x)
+$$
 
 我们可以利用反函数求导。$x = e^y$。
 两边对 $x$ 求导：
@@ -155,7 +183,11 @@ $$
 
 ### 4.5 加法法则 (Sum Rule)
 
-证明：$f(x) = u(x) + v(x)$
+证明：
+
+$$
+f(x) = u(x) + v(x)
+$$
 
 $$
 f'(x) = \lim_{\Delta x \to 0} \frac{[u(x+\Delta x) + v(x+\Delta x)] - [u(x) + v(x)]}{\Delta x}
@@ -171,7 +203,11 @@ $$
 
 ### 4.6 乘法法则 (Product Rule)
 
-证明：$f(x) = u(x)v(x)$
+证明：
+
+$$
+f(x) = u(x)v(x)
+$$
 
 $$
 f'(x) = \lim_{\Delta x \to 0} \frac{u(x+\Delta x)v(x+\Delta x) - u(x)v(x)}{\Delta x}

@@ -14,17 +14,34 @@
 *   **隐藏层 (Hidden Layer)**: 2 个神经元 ($h_1, h_2$)，使用 Sigmoid 激活函数。
 *   **输出层 (Output Layer)**: 1 个神经元 ($y_{pred}$)，线性输出。
 
-### 结构图
+### 结构图 (带权重标注)
+
+为了让你不再懵逼，我们把权重 $w$ 标在连线上：
 
 ```mermaid
 graph LR
-    x1((x1)) --> h1((h1))
-    x2((x2)) --> h1
-    x1 --> h2((h2))
-    x2 --> h2
+    subgraph Input Layer
+    x1((x1))
+    x2((x2))
+    end
     
-    h1 --> y((y_pred))
-    h2 --> y
+    subgraph Hidden Layer
+    h1((h1))
+    h2((h2))
+    end
+    
+    subgraph Output Layer
+    y((y_pred))
+    end
+
+    x1 -- w11 --> h1
+    x2 -- w21 --> h1
+    
+    x1 -- w12 --> h2
+    x2 -- w22 --> h2
+    
+    h1 -- v1 --> y
+    h2 -- v2 --> y
 ```
 
 ### 数学符号定义
@@ -33,9 +50,18 @@ graph LR
 
 **2. 权重矩阵 1**: $W_1$ (连接 Input -> Hidden)
 
+这里的 $W_1$ 其实就是把上面图里的 4 条红线（权重）打包成一个矩阵。
+*   **第 1 行**对应 $x_1$ 发出的两条线 ($w_{11}, w_{12}$)
+*   **第 2 行**对应 $x_2$ 发出的两条线 ($w_{21}, w_{22}$)
+
 $$
 W_1 = \begin{bmatrix} w_{11} & w_{12} \\ w_{21} & w_{22} \end{bmatrix}
 $$
+
+*   $w_{11}$: 连接 $x_1 \to h_1$
+*   $w_{12}$: 连接 $x_1 \to h_2$
+*   $w_{21}$: 连接 $x_2 \to h_1$
+*   $w_{22}$: 连接 $x_2 \to h_2$
 
 **3. 权重矩阵 2**: $W_2$ (连接 Hidden -> Output)
 
