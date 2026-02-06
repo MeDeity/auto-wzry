@@ -26,6 +26,9 @@ def print_menu():
     print("--------------------------------------------------")
     print("6. 退出 (Exit)")
     print("==================================================")
+    print("7. [教学] 模型显微镜 (Model Inspector)")
+    print("   -> 场景: 查看一张图片如何在神经网络中流动的演示。")
+    print("==================================================")
 
 def run_command(cmd_args):
     """
@@ -95,6 +98,10 @@ def main():
             print("Exiting...")
             sys.exit(0)
             
+        elif choice == '7':
+            print("\n正在启动模型显微镜 (Model Inspector)...\n")
+            run_command(['main/debug/inspect_model.py'])
+
         else:
             print("无效的选项，请重新输入。")
             time.sleep(1)
