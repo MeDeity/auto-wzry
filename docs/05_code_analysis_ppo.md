@@ -79,6 +79,10 @@ class RolloutBuffer:
                 self.optimizer.step()
 ```
 
+> **💡 想深入了解这一步发生了什么？**
+> 请阅读 **[07. 变强的本质：反向传播 (Backpropagation)](07_backpropagation_essence.md)**。
+> 我们用一个生动的例子和专门的演示脚本，为您揭开“梯度下降”的神秘面纱。
+
 ---
 
 ## 3. 总结

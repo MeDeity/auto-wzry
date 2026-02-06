@@ -28,6 +28,9 @@ def print_menu():
     print("==================================================")
     print("7. [教学] 模型显微镜 (Model Inspector)")
     print("   -> 场景: 查看一张图片如何在神经网络中流动的演示。")
+    print("8. [教学] PPO 进化实验室 (Evolution Lab)")
+    print("   -> 场景: 演示 AI 是如何根据经验修改神经元权重的。")
+    print("   -> 理论: 详见 docs/07_backpropagation_essence.md")
     print("==================================================")
 
 def run_command(cmd_args):
@@ -101,6 +104,10 @@ def main():
         elif choice == '7':
             print("\n正在启动模型显微镜 (Model Inspector)...\n")
             run_command(['main/debug/inspect_model.py'])
+
+        elif choice == '8':
+            print("\n正在启动 PPO 进化实验室 (Evolution Lab)...\n")
+            run_command(['main/debug/inspect_ppo.py'])
 
         else:
             print("无效的选项，请重新输入。")
