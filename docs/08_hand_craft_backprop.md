@@ -29,19 +29,21 @@ graph LR
 
 ### 数学符号定义
 
-1.  **输入**: $X = [x_1, x_2]$
+**1. 输入**: $X = [x_1, x_2]$
 
-2.  **权重矩阵 1**: $W_1$ (连接 Input -> Hidden)
+**2. 权重矩阵 1**: $W_1$ (连接 Input -> Hidden)
+
 $$
 W_1 = \begin{bmatrix} w_{11} & w_{12} \\ w_{21} & w_{22} \end{bmatrix}
 $$
 
-3.  **权重矩阵 2**: $W_2$ (连接 Hidden -> Output)
+**3. 权重矩阵 2**: $W_2$ (连接 Hidden -> Output)
+
 $$
 W_2 = \begin{bmatrix} v_1 \\ v_2 \end{bmatrix}
 $$
 
-4.  **真值**: $y_{target}$
+**4. 真值**: $y_{target}$
 
 ---
 
@@ -54,6 +56,7 @@ $$
 *   $y_{target} = 0.8$
 
 ### 第一步：计算隐藏层
+
 我们先算出隐藏层的原始值 $h_{raw}$，然后通过激活函数 Sigmoid。
 
 $$
@@ -89,6 +92,7 @@ y_{pred} = 0.51999 \times 0.5 + 0.53494 \times 0.6 \approx 0.25999 + 0.32096 = 0
 $$
 
 ### 第三步：计算 Loss (误差)
+
 我们使用 MSE (均方误差)，为了求导方便乘个 0.5：
 
 $$
@@ -114,7 +118,7 @@ $$
 
 路径：$Loss \rightarrow y_{pred} \rightarrow W_2$
 
-1.  **最外层**: Loss 对 $y_{pred}$ 的导数
+**1. 最外层**: Loss 对 $y_{pred}$ 的导数
 
 $$
 \frac{\partial Loss}{\partial y_{pred}} = \frac{\partial}{\partial y_{pred}} [\frac{1}{2}(y_{pred} - y_{target})^2] = (y_{pred} - y_{target})
@@ -124,7 +128,8 @@ $$
 \delta_{out} = 0.58095 - 0.8 = -0.21905
 $$
 
-2.  **下一层**: $y_{pred}$ 对 $W_2$ 的导数
+**2. 下一层**: $y_{pred}$ 对 $W_2$ 的导数
+
 因为 $y_{pred} = h_1 v_1 + h_2 v_2$
 
 $$
@@ -135,7 +140,7 @@ $$
 \frac{\partial y_{pred}}{\partial v_2} = h_2 = 0.53494
 $$
 
-3.  **合并 (链式法则)**:
+**3. 合并 (链式法则)**:
 
 $$
 \frac{\partial Loss}{\partial v_1} = \delta_{out} \times h_1 = -0.21905 \times 0.51999 \approx -0.1139
@@ -153,7 +158,7 @@ $$
 
 我们需要把误差继续往回传。
 
-1.  **误差传给隐藏层**: Loss 对 $h$ 的导数
+**1. 误差传给隐藏层**: Loss 对 $h$ 的导数
 
 $$
 \frac{\partial Loss}{\partial h_1} = \frac{\partial Loss}{\partial y_{pred}} \cdot \frac{\partial y_{pred}}{\partial h_1} = \delta_{out} \cdot v_1
@@ -169,7 +174,8 @@ $$
 \delta_{h2\_pre} = -0.21905 \times 0.6 = -0.1314
 $$
 
-2.  **穿过激活函数**: Loss 对 $h_{raw}$ 的导数
+**2. 穿过激活函数**: Loss 对 $h_{raw}$ 的导数
+
 Sigmoid 函数有个绝妙的特性：$\sigma'(x) = \sigma(x)(1-\sigma(x))$
 也就是 $h' = h(1-h)$。
 
@@ -187,7 +193,8 @@ $$
 \delta_{h2} = -0.1314 \times 0.53494 \times (1 - 0.53494) \approx -0.0327
 $$
 
-3.  **最后一步**: Loss 对 $W_1$ 的导数
+**3. 最后一步**: Loss 对 $W_1$ 的导数
+
 因为 $h_{raw} = X \cdot W_1$
 
 $$
