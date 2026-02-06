@@ -31,6 +31,9 @@ def print_menu():
     print("8. [教学] PPO 进化实验室 (Evolution Lab)")
     print("   -> 场景: 演示 AI 是如何根据经验修改神经元权重的。")
     print("   -> 理论: 详见 docs/07_backpropagation_essence.md")
+    print("9. [教学] 手搓反向传播 (Hand-Craft Backprop)")
+    print("   -> 场景: 用 NumPy 手写微积分，推导梯度公式。")
+    print("   -> 理论: 详见 docs/08_hand_craft_backprop.md")
     print("==================================================")
 
 def run_command(cmd_args):
