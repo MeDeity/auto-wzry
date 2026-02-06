@@ -58,7 +58,7 @@ def run_command(cmd_args):
 def main():
     while True:
         print_menu()
-        choice = input("请输入选项 (1-6): ").strip()
+        choice = input("请输入选项 (1-9): ").strip()
         
         if choice == '1':
             print("\n正在启动录制脚本...")
@@ -111,6 +111,10 @@ def main():
         elif choice == '8':
             print("\n正在启动 PPO 进化实验室 (Evolution Lab)...\n")
             run_command(['main/debug/inspect_ppo.py'])
+
+        elif choice == '9':
+            print("\n正在启动手搓反向传播 (Hand-Craft Backprop)...\n")
+            run_command(['main/debug/hand_craft_backprop.py'])
 
         else:
             print("无效的选项，请重新输入。")
