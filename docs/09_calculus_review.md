@@ -44,6 +44,7 @@
 
 这是神经网络能训练的根本原因。
 神经网络本质上是一个**复合函数**：
+
 $$
 y = f(g(h(x)))
 $$
@@ -58,11 +59,162 @@ $$
 
 ---
 
-## 4. 两个最重要的推导证明
+## 4. 基础导数推导 (Basic Proofs)
 
-### 4.1 均方误差 (MSE) 的导数
+既然我们想把地基打牢，那就不能只记公式。这里我们用**导数的定义**来推导上述所有公式。
+
+**导数的定义**:
+函数 $f(x)$ 在 $x$ 处的瞬时变化率。
+
+$$
+f'(x) = \lim_{\Delta x \to 0} \frac{f(x + \Delta x) - f(x)}{\Delta x}
+$$
+
+### 4.1 常数法则 (Constant Rule)
+
+证明：$f(x) = C$
+
+$$
+f'(x) = \lim_{\Delta x \to 0} \frac{C - C}{\Delta x} = \lim_{\Delta x \to 0} \frac{0}{\Delta x} = 0
+$$
+
+**直觉**：一条水平线，无论怎么走，高度都不变，所以坡度为 0。
+
+### 4.2 幂函数法则 (Power Rule)
+
+证明：$f(x) = x^n$
+
+$$
+f'(x) = \lim_{\Delta x \to 0} \frac{(x + \Delta x)^n - x^n}{\Delta x}
+$$
+
+利用二项式展开：
+
+$$
+(x + \Delta x)^n = x^n + n \cdot x^{n-1} \cdot \Delta x + \frac{n(n-1)}{2} x^{n-2} (\Delta x)^2 + \dots
+$$
+
+代入极限公式：
+
+$$
+= \lim_{\Delta x \to 0} \frac{x^n + n x^{n-1} \Delta x + O(\Delta x^2) - x^n}{\Delta x}
+$$
+
+$$
+= \lim_{\Delta x \to 0} (n x^{n-1} + O(\Delta x))
+$$
+
+当 $\Delta x \to 0$，所有含 $\Delta x$ 的项都消失了。
+
+$$
+f'(x) = n x^{n-1}
+$$
+
+### 4.3 指数函数 (Exponential)
+
+证明：$f(x) = e^x$
+
+$$
+f'(x) = \lim_{\Delta x \to 0} \frac{e^{x + \Delta x} - e^x}{\Delta x}
+$$
+
+$$
+= \lim_{\Delta x \to 0} \frac{e^x \cdot e^{\Delta x} - e^x}{\Delta x}
+$$
+
+$$
+= e^x \cdot \lim_{\Delta x \to 0} \frac{e^{\Delta x} - 1}{\Delta x}
+$$
+
+数学家告诉我们，自然常数 $e$ 的定义就是让这个极限为 1：$\lim_{h \to 0} \frac{e^h - 1}{h} = 1$。
+
+$$
+f'(x) = e^x \cdot 1 = e^x
+$$
+
+### 4.4 对数函数 (Logarithm)
+
+证明：$y = \ln(x)$
+
+我们可以利用反函数求导。$x = e^y$。
+两边对 $x$ 求导：
+
+$$
+1 = e^y \cdot y'
+$$
+
+$$
+y' = \frac{1}{e^y}
+$$
+
+因为 $e^y = x$，所以：
+
+$$
+y' = \frac{1}{x}
+$$
+
+### 4.5 加法法则 (Sum Rule)
+
+证明：$f(x) = u(x) + v(x)$
+
+$$
+f'(x) = \lim_{\Delta x \to 0} \frac{[u(x+\Delta x) + v(x+\Delta x)] - [u(x) + v(x)]}{\Delta x}
+$$
+
+$$
+= \lim_{\Delta x \to 0} \left[ \frac{u(x+\Delta x) - u(x)}{\Delta x} + \frac{v(x+\Delta x) - v(x)}{\Delta x} \right]
+$$
+
+$$
+= u'(x) + v'(x)
+$$
+
+### 4.6 乘法法则 (Product Rule)
+
+证明：$f(x) = u(x)v(x)$
+
+$$
+f'(x) = \lim_{\Delta x \to 0} \frac{u(x+\Delta x)v(x+\Delta x) - u(x)v(x)}{\Delta x}
+$$
+
+**技巧**：加一项减一项 $u(x+\Delta x)v(x)$。
+
+$$
+= \lim_{\Delta x \to 0} \frac{u(x+\Delta x)v(x+\Delta x) - u(x+\Delta x)v(x) + u(x+\Delta x)v(x) - u(x)v(x)}{\Delta x}
+$$
+
+$$
+= \lim_{\Delta x \to 0} \left[ u(x+\Delta x) \frac{v(x+\Delta x) - v(x)}{\Delta x} + v(x) \frac{u(x+\Delta x) - u(x)}{\Delta x} \right]
+$$
+
+当 $\Delta x \to 0$， $u(x+\Delta x) \to u(x)$。
+
+$$
+= u(x)v'(x) + v(x)u'(x)
+$$
+
+### 4.7 ReLU 函数
+
+定义：
+$$
+f(x) = \begin{cases} x & x > 0 \\ 0 & x \le 0 \end{cases}
+$$
+
+分段求导：
+*   当 $x > 0$ 时，$f(x) = x$，导数是 1。
+*   当 $x < 0$ 时，$f(x) = 0$，导数是 0。
+*   当 $x = 0$ 时，导数不存在（不可导点），但在工程实现中通常人为定义为 0 或 0.5。
+
+---
+
+## 5. 神经网络核心推导 (Neural Network Proofs)
+
+这里我们应用前面的基础，推导两个最常用的组件。
+
+### 5.1 均方误差 (MSE) 的导数
 
 Loss 函数通常长这样（为了方便，前面乘个 $1/2$）：
+
 $$
 L = \frac{1}{2}(y_{pred} - y_{target})^2
 $$
@@ -71,25 +223,27 @@ $$
 令 $u = y_{pred} - y_{target}$，则 $L = \frac{1}{2}u^2$。
 
 根据链式法则：
+
 $$
 \frac{\partial L}{\partial y_{pred}} = \frac{\partial L}{\partial u} \cdot \frac{\partial u}{\partial y_{pred}}
 $$
 
-1.  外层导数：$\frac{1}{2}u^2 \to u$
-2.  内层导数：$(y_{pred} - y_{target}) \to 1$
+**1. 外层导数**：$\frac{1}{2}u^2 \to u$
+
+**2. 内层导数**：$(y_{pred} - y_{target}) \to 1$
 
 所以：
+
 $$
 \frac{\partial L}{\partial y_{pred}} = u \cdot 1 = y_{pred} - y_{target}
 $$
 
 **结论**：MSE 的梯度就是**误差本身**（预测值 - 真实值）。这也太符合直觉了！误差越大，梯度越大，调整力度越大。
 
----
-
-### 4.2 Sigmoid 函数的导数
+### 5.2 Sigmoid 函数的导数
 
 Sigmoid 公式：
+
 $$
 \sigma(x) = \frac{1}{1 + e^{-x}}
 $$
@@ -103,28 +257,57 @@ $$
 
 **推导步骤**：
 
-1.  **链式法则外层** ($u^{-1}$):
-    $$ -1 \cdot (1 + e^{-x})^{-2} $$
-    $$ = \frac{-1}{(1 + e^{-x})^2} $$
+**1. 链式法则外层** ($u^{-1}$):
 
-2.  **链式法则内层** ($1 + e^{-x}$):
-    常数 1 导数是 0。
-    $e^{-x}$ 的导数是 $e^{-x} \cdot (-1) = -e^{-x}$。
+$$
+-1 \cdot (1 + e^{-x})^{-2}
+$$
 
-3.  **合体**:
-    $$ \frac{dy}{dx} = \frac{-1}{(1 + e^{-x})^2} \cdot (-e^{-x}) $$
-    $$ = \frac{e^{-x}}{(1 + e^{-x})^2} $$
+$$
+= \frac{-1}{(1 + e^{-x})^2}
+$$
 
-4.  **化简魔法**（凑出 $y$ 的形式）:
-    $$ = \frac{1}{1 + e^{-x}} \cdot \frac{e^{-x}}{1 + e^{-x}} $$
-    $$ = y \cdot \frac{e^{-x}}{1 + e^{-x}} $$
+**2. 链式法则内层** ($1 + e^{-x}$):
 
-    注意分子 $e^{-x}$ 可以写成 $(1 + e^{-x}) - 1$：
-    $$ = y \cdot \frac{(1 + e^{-x}) - 1}{1 + e^{-x}} $$
-    $$ = y \cdot (1 - \frac{1}{1 + e^{-x}}) $$
-    $$ = y \cdot (1 - y) $$
+常数 1 导数是 0。
+$e^{-x}$ 的导数是 $e^{-x} \cdot (-1) = -e^{-x}$。
+
+**3. 合体**:
+
+$$
+\frac{dy}{dx} = \frac{-1}{(1 + e^{-x})^2} \cdot (-e^{-x})
+$$
+
+$$
+= \frac{e^{-x}}{(1 + e^{-x})^2}
+$$
+
+**4. 化简魔法**（凑出 $y$ 的形式）:
+
+$$
+= \frac{1}{1 + e^{-x}} \cdot \frac{e^{-x}}{1 + e^{-x}}
+$$
+
+$$
+= y \cdot \frac{e^{-x}}{1 + e^{-x}}
+$$
+
+注意分子 $e^{-x}$ 可以写成 $(1 + e^{-x}) - 1$：
+
+$$
+= y \cdot \frac{(1 + e^{-x}) - 1}{1 + e^{-x}}
+$$
+
+$$
+= y \cdot (1 - \frac{1}{1 + e^{-x}})
+$$
+
+$$
+= y \cdot (1 - y)
+$$
 
 **结论**：
+
 $$
 \sigma'(x) = \sigma(x) \cdot (1 - \sigma(x))
 $$
@@ -133,7 +316,7 @@ $$
 
 ---
 
-## 5. 动手验证
+## 6. 动手验证
 
 光看不练假把式。我们提供了一个 Python 脚本，使用 `SymPy` 库（Python 的符号计算库）来自动推导验证上述公式。
 
