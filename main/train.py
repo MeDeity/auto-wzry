@@ -8,6 +8,7 @@ import time
 import logging
 import argparse
 import torch
+import cv2
 import numpy as np
 from main.env.wzry_env import WZRYEnv
 from main.model import ActorCritic
@@ -18,6 +19,7 @@ def parse_args():
     parser.add_argument("--pretrained-path", type=str, default=None, help="Path to pretrained BC model (e.g., models/bc_model_epoch_50.pth)")
     parser.add_argument("--resume-path", type=str, default=None, help="Path to existing PPO model to resume training (e.g., models/ppo_wzry_epoch_10.pth)")
     parser.add_argument("--max-timesteps", type=int, default=100000, help="Maximum training timesteps")
+    parser.add_argument("--render", action="store_true", default=True, help="Render the environment during training")
     return parser.parse_args()
 
 def train():
@@ -82,7 +84,15 @@ def train():
                     new_state_dict[k] = v
                 elif k.startswith('fc.'):
                     new_key = k.replace('fc.', 'actor_mean.')
-                    new_state_dict[new_key] = v
+                    
+                    # 检查形状是否匹配，如果不匹配则进行切片
+                    # BC Model fc: [4, 512]
+                    # PPO Actor mean: [3, 512]
+                    if v.shape[0] == 4 and action_dim == 3:
+                        logger.info(f"Slicing weights for {k} from {v.shape} to {(3, v.shape[1] if len(v.shape)>1 else '')}")
+                        new_state_dict[new_key] = v[:3] # 取前3维 (x, y, press)
+                    else:
+                        new_state_dict[new_key] = v
             
             msg = policy.load_state_dict(new_state_dict, strict=False)
             logger.info(f"Loaded pretrained BC weights. Missing keys: {msg.missing_keys}")
@@ -135,6 +145,45 @@ def train():
                 next_state, reward, terminated, truncated, info = env.step(action_env)
                 done = terminated or truncated
                 
+                # Visualization
+                if args.render:
+                    try:
+                        raw_frame = env.render()
+                        if raw_frame is not None:
+                            # Convert to BGR for OpenCV
+                            display_frame = cv2.cvtColor(raw_frame, cv2.COLOR_RGB2BGR)
+                            h, w = display_frame.shape[:2]
+                            
+                            # Action: [x, y, press_prob]
+                            pred_x, pred_y, pred_prob = action_env
+                            
+                            # Draw Crosshair
+                            center_x = int(pred_x * w)
+                            center_y = int(pred_y * h)
+                            
+                            color = (0, 0, 255) if pred_prob > 0.5 else (0, 255, 0) # Red if press, Green if release
+                            status_text = f"DOWN ({pred_prob:.2f})" if pred_prob > 0.5 else f"UP ({pred_prob:.2f})"
+                            
+                            cv2.circle(display_frame, (center_x, center_y), 20, color, 2)
+                            cv2.line(display_frame, (center_x - 30, center_y), (center_x + 30, center_y), color, 2)
+                            cv2.line(display_frame, (center_x, center_y - 30), (center_x, center_y + 30), color, 2)
+                            
+                            # Draw Status Text
+                            cv2.putText(display_frame, f"Action: {status_text}", (10, 80), 
+                                       cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+                            
+                            # Draw Reward
+                            cv2.putText(display_frame, f"Reward: {reward:.4f}", (10, 120),
+                                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+
+                            cv2.imshow("PPO Training Monitor", display_frame)
+                            if cv2.waitKey(1) & 0xFF == ord('q'):
+                                logger.info("Visualization stopped by user.")
+                                args.render = False
+                                cv2.destroyAllWindows()
+                    except Exception as e:
+                        logger.warning(f"Visualization error: {e}")
+                
                 # 存储经验
                 buffer.add(state_tensor, action, reward, done, log_prob, value)
                 
@@ -182,6 +231,8 @@ def train():
         logger.error(f"Training failed: {e}", exc_info=True)
     finally:
         env.close()
+        if args.render:
+            cv2.destroyAllWindows()
         logger.info("Environment closed.")
 
 if __name__ == "__main__":

@@ -63,8 +63,14 @@ def check_data_quality():
             status = "✅ OK"
             if ratio < 0.1:
                 status = "⚠️ Low Activity"
+            
             if not has_down_event and actions:
-                status = "❌ No DOWN Event"
+                # 如果没有 DOWN 事件，但有大量 MOVE 且活跃度高，说明可能是先按住再录制的
+                if ratio > 0.5:
+                    status = "⚠️ No DOWN (Hold?)"
+                else:
+                    status = "❌ No DOWN Event"
+                    
             if not actions:
                 status = "💤 No Actions"
 
