@@ -34,6 +34,9 @@ def print_menu():
     print("9. [教学] 手搓反向传播 (Hand-Craft Backprop)")
     print("   -> 场景: 用 NumPy 手写微积分，推导梯度公式。")
     print("   -> 理论: 详见 docs/08_hand_craft_backprop.md")
+    print("10. [教学] 微积分实验室 (Calculus Lab)")
+    print("   -> 场景: 用 SymPy 自动推导证明 Sigmoid/MSE 导数。")
+    print("   -> 理论: 详见 docs/09_calculus_review.md")
     print("==================================================")
 
 def run_command(cmd_args):
@@ -58,7 +61,7 @@ def run_command(cmd_args):
 def main():
     while True:
         print_menu()
-        choice = input("请输入选项 (1-9): ").strip()
+        choice = input("请输入选项 (1-10): ").strip()
         
         if choice == '1':
             print("\n正在启动录制脚本...")
@@ -115,6 +118,10 @@ def main():
         elif choice == '9':
             print("\n正在启动手搓反向传播 (Hand-Craft Backprop)...\n")
             run_command(['main/debug/hand_craft_backprop.py'])
+
+        elif choice == '10':
+            print("\n正在启动微积分实验室 (Calculus Lab)...\n")
+            run_command(['main/debug/calculus_lab.py'])
 
         else:
             print("无效的选项，请重新输入。")
